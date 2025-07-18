@@ -4,6 +4,8 @@ const db = require('./db/db');
 const { imprimirCheque, imprimirPrueba } = require('./util/imprimir');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
+const { guardarConfiguracionBanco, guardarHistorialCheque } = require('./db/db');
+
 
 const appVersion = app.getVersion();
 

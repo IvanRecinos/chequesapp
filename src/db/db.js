@@ -150,6 +150,7 @@ function obtenerBancos() {
 
 
 module.exports = {
+  db,
   obtenerConfiguraciones,
   guardarConfiguracionBanco,
   guardarHistorialCheque,
