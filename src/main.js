@@ -349,7 +349,20 @@ ipcMain.handle('migrar-bancos', (e, rutaJson) => {
 });
 
 ipcMain.handle('migrar-historial', (e, rutaJson) => {
-  const datos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
+  const datosCrudos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
+
+  // Asegurarse de que todos los campos requeridos existan
+  const datos = datosCrudos.map(h => ({
+    noCheque: h.noCheque ?? '', // Si noCheque no existe, asigna ''
+    beneficiario: h.beneficiario ?? '',
+    monto: h.monto ?? '',
+    montoLetras: h.montoLetras ?? '',
+    lugar: h.lugar ?? '',
+    fecha: h.fecha ?? '',
+    banco: h.banco ?? '',
+    fechaGuardado: h.fechaGuardado ?? new Date().toISOString()
+  }));
+
   const insert = db.prepare(`
     INSERT INTO historial (
       noCheque, beneficiario, monto, montoLetras,
@@ -359,11 +372,10 @@ ipcMain.handle('migrar-historial', (e, rutaJson) => {
       @lugar, @fecha, @banco, @fechaGuardado
     )
   `);
-  const tx = db.transaction(arr => arr.forEach(h => {
-    if (!h.fechaGuardado) h.fechaGuardado = new Date().toISOString();
-    insert.run(h);
-  }));
+
+  const tx = db.transaction(arr => arr.forEach(h => insert.run(h)));
   tx(datos);
+
   return true;
 });
 
