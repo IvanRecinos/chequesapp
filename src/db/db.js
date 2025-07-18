@@ -142,12 +142,10 @@ function obtenerChequePorId(id) {
   return db.prepare('SELECT * FROM historial WHERE id = ?').get(id);
 }
 
-// db.js
 function obtenerBancos() {
   const stmt = db.prepare('SELECT * FROM bancos');
   return stmt.all();
 }
-
 
 module.exports = {
   db,
