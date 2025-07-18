@@ -144,7 +144,7 @@ function obtenerChequePorId(id) {
 
 // db.js
 function obtenerBancos() {
-  const stmt = db.prepare('SELECT nombreBanco FROM bancos');
+  const stmt = db.prepare('SELECT * FROM bancos');
   return stmt.all();
 }
 
