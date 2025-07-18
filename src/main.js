@@ -331,7 +331,20 @@ ipcMain.handle('editar-cheque', async (event, id) => {
 });
 
 ipcMain.handle('migrar-bancos', (e, rutaJson) => {
-  const datos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
+  const datosCrudos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
+
+  const datos = datosCrudos.map(banco => ({
+    nombreBanco: banco.nombreBanco ?? 'Desconocido',
+    beneficiarioX: banco.beneficiario?.x ?? 0,
+    beneficiarioY: banco.beneficiario?.y ?? 0,
+    montoX: banco.monto?.x ?? 0,
+    montoY: banco.monto?.y ?? 0,
+    montoLetrasX: banco.montoLetras?.x ?? 0,
+    montoLetrasY: banco.montoLetras?.y ?? 0,
+    fechaX: banco.fecha?.x ?? 0,
+    fechaY: banco.fecha?.y ?? 0
+  }));
+
   const insert = db.prepare(`
     INSERT OR IGNORE INTO bancos (
       nombreBanco, beneficiarioX, beneficiarioY,
@@ -343,10 +356,13 @@ ipcMain.handle('migrar-bancos', (e, rutaJson) => {
       @fechaX, @fechaY
     )
   `);
+
   const tx = db.transaction(arr => arr.forEach(b => insert.run(b)));
   tx(datos);
+
   return true;
 });
+
 
 ipcMain.handle('migrar-historial', (e, rutaJson) => {
   const datosCrudos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
