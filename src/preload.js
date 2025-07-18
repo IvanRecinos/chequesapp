@@ -20,5 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   editarCheque: (id) => ipcRenderer.invoke('editar-cheque', id), // solo si lo manejás en main
 
   migrarBancos:   (ruta) => ipcRenderer.invoke('migrar-bancos', ruta),
-  migrarHistorial:(ruta) => ipcRenderer.invoke('migrar-historial', ruta)
+  migrarHistorial:(ruta) => ipcRenderer.invoke('migrar-historial', ruta),
+
+  seleccionarArchivoJson: () => ipcRenderer.invoke('seleccionar-archivo-json'),
+
 });

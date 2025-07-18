@@ -364,3 +364,16 @@ ipcMain.handle('migrar-historial', (e, rutaJson) => {
   tx(datos);
   return true;
 });
+
+const { dialog } = require('electron');
+
+ipcMain.handle('seleccionar-archivo-json', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Selecciona archivo JSON',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    properties: ['openFile']
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
