@@ -33,17 +33,31 @@
     btnB.addEventListener('click', () => {
       const file = document.getElementById('fileBancos').files[0];
       if (!file) return alert('Selecciona primero el archivo de bancos');
-      window.electronAPI.migrarBancos(file.path)
+
+      const ruta = file.path;
+      if (!ruta) return alert('⚠️ No se pudo obtener la ruta del archivo (¿estás usando versión empaquetada?)');
+
+      window.electronAPI.migrarBancos(ruta)
         .then(() => alert('✅ Bancos migrados correctamente'))
-        .catch(err => alert('❌ Error: ' + err.message));
+        .catch(err => {
+          console.error(err);
+          alert('❌ Error: ' + err.message);
+        });
     });
 
     btnH.addEventListener('click', () => {
       const file = document.getElementById('fileHistorial').files[0];
       if (!file) return alert('Selecciona primero el archivo de historial');
-      window.electronAPI.migrarHistorial(file.path)
+
+      const ruta = file.path;
+      if (!ruta) return alert('⚠️ No se pudo obtener la ruta del archivo (¿estás usando versión empaquetada?)');
+
+      window.electronAPI.migrarHistorial(ruta)
         .then(() => alert('✅ Historial migrado correctamente'))
-        .catch(err => alert('❌ Error: ' + err.message));
+        .catch(err => {
+          console.error(err);
+          alert('❌ Error: ' + err.message);
+        });
     });
   </script>
 </body>
