@@ -1,85 +1,17 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron'); // 👈 modificado
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 const db = require('./db/db');
 const { imprimirCheque, imprimirPrueba } = require('./util/imprimir');
 const fs = require('fs');
-
-// 👇 NUEVO: Actualizador y logging
 const { autoUpdater } = require('electron-updater');
-autoUpdater.autoDownload = true;
-autoUpdater.logger = require('electron-log');
-autoUpdater.logger.transports.file.level = 'info';
+
+const appVersion = app.getVersion();
 
 let mainWindow;
 let configWindow;
 let historialWindow;
 let acercaWindow;
 let migrarWindow;
-let progressWindow; // 👈 NUEVO
-
-// 👇 NUEVO: Ventana para mostrar progreso de actualización
-function createProgressWindow () {
-  progressWindow = new BrowserWindow({
-    width: 400,
-    height: 140,
-    title: 'Actualizando ChequesApp…',
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    parent: mainWindow,
-    modal: true,
-    show: false,
-    webPreferences: { nodeIntegration: true }
-  });
-
-  progressWindow.loadURL('data:text/html,' +
-    encodeURIComponent(`
-      <style>
-        body{font-family:sans-serif;margin:0;padding:20px;}
-        #bar{width:100%;background:#ddd;height:14px;border-radius:7px;overflow:hidden}
-        #progress{width:0;height:14px;background:#4ade80}
-        #txt{margin-top:6px;font-size:13px;text-align:center}
-      </style>
-      <h3 style="margin:0 0 8px">Descargando actualización…</h3>
-      <div id="bar"><div id="progress"></div></div>
-      <div id="txt">0&nbsp;%</div>
-      <script>
-        require('electron').ipcRenderer.on('download-progress',(e,p)=>{
-          const pr=Math.floor(p.percent);
-          document.getElementById('progress').style.width=pr+'%';
-          document.getElementById('txt').textContent=pr+' %';
-        });
-      </script>
-    `)
-  );
-}
-
-// 👇 NUEVO: Eventos del autoUpdater
-autoUpdater.on('error', err => {
-  console.error('Updater error:', err);
-});
-
-autoUpdater.on('update-available', () => {
-  createProgressWindow();
-  progressWindow.once('ready-to-show', () => progressWindow.show());
-});
-
-autoUpdater.on('download-progress', p => {
-  if (progressWindow) progressWindow.webContents.send('download-progress', p);
-});
-
-autoUpdater.on('update-downloaded', () => {
-  if (progressWindow) progressWindow.close();
-  dialog.showMessageBox({
-    type: 'info',
-    buttons: ['Reiniciar ahora', 'Más tarde'],
-    defaultId: 0,
-    message: 'Se descargó una actualización de ChequesApp.',
-    detail: 'Reiniciar la aplicación para aplicar la nueva versión.'
-  }).then(r => {
-    if (r.response === 0) autoUpdater.quitAndInstall();
-  });
-});
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -108,7 +40,27 @@ function createMainWindow() {
         { label: 'Historial', click: () => openHistorialWindow() },
         { label: 'Migrar datos', click: () => openMigrarWindow() },
         { type: 'separator' },
+        {
+          label: 'Buscar actualizaciones',
+          click: () => {
+            autoUpdater.checkForUpdates();
+          }
+        },
+        { type: 'separator' },
         { label: 'Salir', role: 'quit' }
+      ]
+    },
+    {
+      label: 'Acerca de',
+      submenu: [
+        {
+          label: `Versión: ${appVersion}`,
+          enabled: false
+        },
+        {
+          label: 'Aplicación creada por WebDevelopmentGT',
+          enabled: false
+        }
       ]
     }
   ]);
@@ -119,8 +71,11 @@ function createMainWindow() {
   });
 }
 
-function openMigrarWindow () {
-  if (migrarWindow) { migrarWindow.focus(); return; }
+function openMigrarWindow() {
+  if (migrarWindow) {
+    migrarWindow.focus();
+    return;
+  }
 
   migrarWindow = new BrowserWindow({
     width: 480,
@@ -136,7 +91,9 @@ function openMigrarWindow () {
 
   migrarWindow.loadFile(path.join(__dirname, 'html', 'migrar.html'));
 
-  migrarWindow.on('closed', () => { migrarWindow = null; });
+  migrarWindow.on('closed', () => {
+    migrarWindow = null;
+  });
 }
 
 function openConfigWindow() {
@@ -203,7 +160,6 @@ function openAcercaWindow() {
 
 app.whenReady().then(() => {
   createMainWindow();
-  autoUpdater.checkForUpdates(); // 👈 NUEVO: verifica actualizaciones al iniciar
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
@@ -214,8 +170,56 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+// AutoUpdater events
 
-// 👉 IPC HANDLERS (todos los que ya tenías)
+autoUpdater.on('checking-for-update', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Chequeando actualizaciones',
+    message: 'Buscando actualizaciones...'
+  });
+});
+
+autoUpdater.on('update-available', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Actualización disponible',
+    message: 'Hay una nueva actualización, se descargará ahora.'
+  });
+});
+
+autoUpdater.on('update-not-available', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Sin actualizaciones',
+    message: 'No hay actualizaciones actuales.'
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  dialog.showErrorBox('Error al buscar actualizaciones', err == null ? "Error desconocido" : (err.stack || err).toString());
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = `Velocidad: ${Math.round(progressObj.bytesPerSecond / 1024)} KB/s - Descargado ${Math.round(progressObj.percent)}% (${progressObj.transferred}/${progressObj.total})`;
+  console.log(log_message);
+  if (mainWindow) {
+    mainWindow.webContents.send('download-progress', progressObj.percent);
+  }
+});
+
+autoUpdater.on('update-downloaded', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Actualización lista',
+    message: 'Actualización descargada, la aplicación se reiniciará para aplicar la actualización.'
+  }).then(() => {
+    autoUpdater.quitAndInstall();
+  });
+});
+
+// IPC Handlers
+
 ipcMain.handle('guardar-configuracion', async (event, config) => {
   const result = await db.guardarConfiguracionBanco(config);
   if (configWindow) configWindow.close();
@@ -303,9 +307,11 @@ ipcMain.handle('buscar-por-cliente', async (event, cliente) => {
 
 ipcMain.handle('buscar-por-rango', async (event, { desde, hasta }) => {
   const historial = await db.obtenerHistorial();
+
   const inicio = new Date(desde);
   const fin = new Date(hasta);
   fin.setHours(23, 59, 59, 999);
+
   return historial.filter(c => {
     const fecha = new Date(c.fechaGuardado || c.fecha || c.fechaImpresion);
     return fecha >= inicio && fecha <= fin;

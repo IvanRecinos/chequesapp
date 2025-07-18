@@ -1,6 +1,6 @@
 {
   "name": "chequesapp",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "Aplicación para llenar e imprimir cheques de forma digital",
   "main": "src/main.js",
   "scripts": {
@@ -49,7 +49,8 @@
       {
         "provider": "github",
         "owner": "ivanrecinos",
-        "repo": "chequesapp"
+        "repo": "chequesapp",
+        "releaseType": "release"
       }
     ]
   }
