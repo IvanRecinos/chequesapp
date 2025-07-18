@@ -25,7 +25,7 @@ async function imprimirCheque(datos) {
               .campo {
                 position: absolute;
                 white-space: nowrap;
-                font-size: 14pt;
+                font-size: 12pt;
               }
             </style>
           </head>
