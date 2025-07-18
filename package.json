@@ -1,6 +1,6 @@
 {
   "name": "chequesapp",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "Aplicación para llenar e imprimir cheques de forma digital",
   "main": "src/main.js",
   "scripts": {
@@ -8,7 +8,8 @@
     "watch:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --watch",
     "dev": "concurrently \"npm run watch:css\" \"npm run start\"",
     "start": "electron .",
-    "dist": "cross-env node build.js"
+    "dist": "cross-env dotenv -e .env node build.js",
+    "release": "cross-env dotenv -e .env electron-builder --publish=always"
   },
   "keywords": [],
   "author": "Iván Recinos",
@@ -24,6 +25,7 @@
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.0",
     "cross-env": "^7.0.3",
+    "dotenv-cli": "^8.0.0",
     "electron": "^37.2.1",
     "electron-builder": "^26.0.12",
     "electron-rebuild": "^3.2.9",
@@ -40,18 +42,15 @@
     "files": [
       "**/*"
     ],
-    "extraResources": [],
     "win": {
       "icon": "src/assets/cheques.ico",
       "target": "nsis"
     },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "ivanrecinos",
-        "repo": "chequesapp",
-        "releaseType": "release"
-      }
-    ]
+    "publish": {
+      "provider": "github",
+      "owner": "ivanrecinos",
+      "repo": "chequesapp",
+      "releaseType": "release"
+    }
   }
 }

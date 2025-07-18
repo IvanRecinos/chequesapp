@@ -1,15 +1,30 @@
-require('dotenv').config();
-const { build } = require('electron-builder');
+const builder = require('electron-builder');
+const Platform = builder.Platform;
 
-build({
-  publish: {
-    provider: 'github',
-    owner: 'IvanRecinos',     // Tu usuario de GitHub con mayúscula aquí
-    repo: 'chequesapp',
-    private: true
-  },
-  // Opcional: otros ajustes si quieres
-}).catch(err => {
-  console.error(err);
-  process.exit(1);
+builder.build({
+  targets: Platform.WINDOWS.createTarget(),
+  config: {
+    appId: 'com.cheques.app',
+    productName: 'ChequesApp',
+    directories: {
+      buildResources: 'assets',
+      output: 'dist'
+    },
+    win: {
+      icon: 'src/assets/cheques.ico',
+      target: 'nsis'
+    },
+    publish: [
+      {
+        provider: 'github',
+        owner: 'ivanrecinos',
+        repo: 'chequesapp',
+        releaseType: 'release'
+      }
+    ]
+  }
+}).then(() => {
+  console.log('✔️ Build finalizado y publicado correctamente.');
+}).catch((error) => {
+  console.error('❌ Error en build:', error);
 });
