@@ -13,6 +13,8 @@ let historialWindow;
 let acercaWindow;
 let migrarWindow;
 
+//agregando todo a la version 1.0.8
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
