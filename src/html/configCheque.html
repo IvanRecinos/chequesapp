@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Configurar Cheque</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+  #canvas {
+    position: relative;
+    width: 720px;   /* ancho ~ 18 cm */
+    height: 320px;  /* alto ~ 8 cm */
+    border: 2px dashed #ccc;
+    margin-bottom: 1rem;
+    background-color: #fff;
+  }
+  .drag {
+    position: absolute;
+    padding: 4px 8px;
+    background-color: #a7f3d0;
+    border: 1px dashed #059669;
+    cursor: move;
+    border-radius: 4px;
+    user-select: none;
+    font-weight: 600;
+  }
+</style>
+
+</head>
+<body class="p-6 bg-gray-100 text-gray-800">
+  <h1 class="text-2xl font-bold mb-4">Configurar Cheque</h1>
+
+  <!-- Área de cheque -->
+  <div id="canvas" class="mx-auto">
+    <div id="beneficiario" class="drag" style="top: 30px; left: 50px;">Beneficiario</div>
+    <div id="monto" class="drag" style="top: 80px; left: 50px;">Monto</div>
+    <div id="montoLetras" class="drag" style="top: 130px; left: 50px;">Monto en letras</div>
+    <div id="fecha" class="drag" style="top: 180px; left: 50px;">Fecha</div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="mb-4">
+    <label class="block font-semibold mb-1">Nombre del Banco:</label>
+    <input id="nombreBanco" type="text" class="w-full p-2 border rounded" placeholder="Ej. BANTRAB" />
+  </div>
+
+  <!-- Botones -->
+  <div class="flex gap-4">
+    <button id="btn-probar" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Imprimir prueba</button>
+    <button id="btn-guardar" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Guardar configuración</button>
+  </div>
+
+  <script>
+    // Hacer los elementos arrastrables dentro del canvas
+    const dragElements = document.querySelectorAll('.drag');
+    let selected = null, offsetX = 0, offsetY = 0;
+
+    dragElements.forEach(el => {
+      el.addEventListener('mousedown', e => {
+        selected = e.target;
+        offsetX = e.clientX - selected.offsetLeft;
+        offsetY = e.clientY - selected.offsetTop;
+      });
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (selected) {
+        selected.style.left = `${e.clientX - offsetX}px`;
+        selected.style.top = `${e.clientY - offsetY}px`;
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      selected = null;
+    });
+
+    // Botón imprimir prueba
+    document.getElementById('btn-probar').addEventListener('click', () => {
+      const config = obtenerConfiguracion();
+      if (!config.nombreBanco) {
+        alert('Debe ingresar el nombre del banco');
+        return;
+      }
+      window.electronAPI.imprimirPrueba(config);
+    });
+
+    // Botón guardar configuración
+    document.getElementById('btn-guardar').addEventListener('click', () => {
+      const config = obtenerConfiguracion();
+      if (!config.nombreBanco) {
+        alert('Debe ingresar el nombre del banco');
+        return;
+      }
+      window.electronAPI.guardarConfiguracion(config)
+        .then(() => alert('Configuración guardada correctamente'))
+        .catch(err => {
+          console.error(err);
+          alert('Error al guardar la configuración');
+        });
+    });
+
+    function obtenerConfiguracion() {
+      return {
+        nombreBanco: document.getElementById('nombreBanco').value.trim(),
+        beneficiarioX: parseInt(document.getElementById('beneficiario').style.left) || 0,
+        beneficiarioY: parseInt(document.getElementById('beneficiario').style.top) || 0,
+        montoX: parseInt(document.getElementById('monto').style.left) || 0,
+        montoY: parseInt(document.getElementById('monto').style.top) || 0,
+        montoLetrasX: parseInt(document.getElementById('montoLetras').style.left) || 0,
+        montoLetrasY: parseInt(document.getElementById('montoLetras').style.top) || 0,
+        fechaX: parseInt(document.getElementById('fecha').style.left) || 0,
+        fechaY: parseInt(document.getElementById('fecha').style.top) || 0
+      };
+    }
+  </script>
+</body>
+</html>

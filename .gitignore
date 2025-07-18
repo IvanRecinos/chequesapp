@@ -1,0 +1,34 @@
+# Dependencias de Node.js
+node_modules/
+
+# Archivos de build/empaquetado
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de entorno (si contienen datos sensibles)
+.env
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Carpetas específicas de Tailwind (opcional si usas cache)
+.cache/
+
+# Otros
+*.log

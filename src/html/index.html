@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cheques App</title>
+  <link href="../styles/output.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+
+  <div class="max-w-lg mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Impresión de Cheques</h1>
+
+    <label for="noCheque" class="block font-semibold mb-1">No. de Cheque:</label>
+    <input id="noCheque" type="text" class="w-full mb-4 p-2 border rounded" />
+
+    <label for="beneficiario" class="block font-semibold mb-1">Beneficiario:</label>
+    <input id="beneficiario" list="listaBeneficiarios" type="text" placeholder="Escribe o selecciona beneficiario" class="w-full mb-4 p-2 border rounded" />
+    <datalist id="listaBeneficiarios"></datalist>
+
+    <label for="monto" class="block font-semibold mb-1">Monto:</label>
+    <input id="monto" type="number" step="0.01" min="0" class="w-full mb-2 p-2 border rounded" />
+
+    <label for="montoLetras" class="block font-semibold mb-1">Monto en letras:</label>
+    <input id="montoLetras" type="text" readonly class="w-full mb-4 p-2 border rounded bg-gray-200" />
+
+    <div class="flex gap-4 mb-4">
+      <div class="flex-1">
+        <label for="lugar" class="block font-semibold mb-1">Lugar:</label>
+        <input id="lugar" type="text" value="Guatemala" class="w-full p-2 border rounded" />
+      </div>
+      <div class="flex-1">
+        <label for="fecha" class="block font-semibold mb-1">Fecha:</label>
+        <input id="fecha" type="date" class="w-full p-2 border rounded" />
+      </div>
+    </div>
+
+    <div class="flex gap-4 items-end mb-4">
+      <div class="flex-1">
+        <label for="banco" class="block font-semibold mb-1">Seleccionar banco:</label>
+        <select id="banco" class="w-full p-2 border rounded">
+          <option value="" disabled selected>Seleccione un banco</option>
+        </select>
+      </div>
+      <button id="btn-imprimir" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
+        Imprimir
+      </button>
+    </div>
+  </div>
+
+<script>
+  // Función para convertir números a letras
+  function numeroALetras(num) {
+    const unidades = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+    const decenas = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+    const especiales = ['once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
+    const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+
+    function convertirGrupo(n) {
+      let output = '';
+
+      if (n === 100) return 'cien';
+
+      if (n >= 100) {
+        output += centenas[Math.floor(n / 100)] + ' ';
+        n = n % 100;
+      }
+
+      if (n > 10 && n < 20) {
+        output += especiales[n - 11] + ' ';
+      } else {
+        if (n >= 20) {
+          output += decenas[Math.floor(n / 10)];
+          if (n % 10 > 0) {
+            output += ' y ' + unidades[n % 10];
+          }
+        } else if (n === 10 || n <= 9) {
+          output += unidades[n];
+        }
+        output += ' ';
+      }
+
+      return output.trim();
+    }
+
+    if (typeof num !== 'number') {
+      num = parseFloat(num);
+      if (isNaN(num)) return '';
+    }
+
+    const partes = num.toFixed(2).split('.');
+    const entero = parseInt(partes[0], 10);
+    const centavos = parseInt(partes[1], 10);
+
+    let letrasEntero = '';
+
+    if (entero === 0) {
+      letrasEntero = 'cero';
+    } else {
+      const millones = Math.floor(entero / 1000000);
+      const miles = Math.floor((entero - millones * 1000000) / 1000);
+      const cientos = entero % 1000;
+
+      if (millones > 0) {
+        if (millones === 1) letrasEntero += 'un millón ';
+        else letrasEntero += convertirGrupo(millones) + ' millones ';
+      }
+
+      if (miles > 0) {
+        if (miles === 1) letrasEntero += 'mil ';
+        else letrasEntero += convertirGrupo(miles) + ' mil ';
+      }
+
+      if (cientos > 0) {
+        letrasEntero += convertirGrupo(cientos) + ' ';
+      }
+    }
+
+    letrasEntero = letrasEntero.trim();
+
+    if (letrasEntero === 'ciento') letrasEntero = 'cien';
+
+    letrasEntero = letrasEntero.charAt(0).toUpperCase() + letrasEntero.slice(1);
+
+    let letrasCentavos = centavos > 0 ? `${centavos}/100` : '00/100';
+
+    if (centavos === 0) {
+      return `${letrasEntero} exactos`;
+    } else {
+      return `${letrasEntero} con ${letrasCentavos}`;
+    }
+  }
+
+  // Carga beneficiarios y bancos al iniciar
+  window.electronAPI.obtenerBeneficiarios().then(beneficiarios => {
+    const datalist = document.getElementById('listaBeneficiarios');
+    beneficiarios.forEach(b => {
+      const option = document.createElement('option');
+      option.value = b;
+      datalist.appendChild(option);
+    });
+  });
+
+  window.electronAPI.obtenerBancos().then(bancos => {
+    const bancoSelect = document.getElementById('banco');
+    bancos.forEach(banco => {
+      const option = document.createElement('option');
+      option.value = banco;
+      option.textContent = banco;
+      bancoSelect.appendChild(option);
+    });
+  });
+
+  // Actualiza monto en letras automáticamente
+  const montoInput = document.getElementById('monto');
+  const montoLetrasInput = document.getElementById('montoLetras');
+  montoInput.addEventListener('input', () => {
+    const val = parseFloat(montoInput.value);
+    montoLetrasInput.value = isNaN(val) ? '' : numeroALetras(val);
+  });
+
+  // Función para formatear fecha sin convertir a objeto Date para evitar desfase horario
+  function formatearFecha(fechaISO) {
+    if (!fechaISO) return '';
+    const partes = fechaISO.split('-');
+    if (partes.length !== 3) return '';
+    const year = partes[0];
+    const month = partes[1];
+    const day = partes[2];
+    return `${day}/${month}/${year}`;
+  }
+
+  // Botón imprimir
+  const imprimirBtn = document.getElementById('btn-imprimir');
+
+  imprimirBtn.addEventListener('click', async () => {
+    const noCheque = document.getElementById('noCheque').value.trim();
+    const beneficiario = document.getElementById('beneficiario').value.trim();
+    const monto = parseFloat(montoInput.value);
+    const montoLetras = montoLetrasInput.value.trim();
+    const lugar = document.getElementById('lugar').value.trim() || 'Guatemala';
+
+   let fecha = document.getElementById('fecha').value; // yyyy-mm-dd
+
+    // Convertir a objeto Date y sumar 1 día
+    let partes = fecha.split('-');
+    let anio = parseInt(partes[0]);
+    let mes = parseInt(partes[1]) - 1; // meses 0-11
+    let dia = parseInt(partes[2]);
+
+    let fechaObj = new Date(anio, mes, dia);
+    fechaObj.setDate(fechaObj.getDate());
+
+    // Formatear para guardar/imprimir
+    fecha = fechaObj.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const fechaText = fechaObj.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const banco = document.getElementById('banco').value;
+
+    if (!noCheque || !beneficiario || isNaN(monto) || !montoLetras || !fecha || !banco) {
+      alert('Por favor, complete todos los campos correctamente antes de imprimir.');
+      return;
+    }
+
+    try {
+      // Guardar cheque en base de datos (historial)
+      await window.electronAPI.guardarCheque({
+        noCheque,
+        beneficiario,
+        monto,
+        montoLetras,
+        lugar,
+        fecha,
+        banco
+      });
+
+      // Mandar a imprimir cheque (backend debe tomar configuración del banco para imprimir)
+      await window.electronAPI.imprimirCheque({
+        noCheque,
+        beneficiario,
+        monto,
+        montoLetras,
+        lugar,
+        fecha: fechaText,
+        banco
+      });
+
+      alert('Cheque guardado e impreso correctamente.');
+
+      // Limpiar formulario
+      document.getElementById('noCheque').value = '';
+      document.getElementById('beneficiario').value = '';
+      montoInput.value = '';
+      montoLetrasInput.value = '';
+      document.getElementById('lugar').value = 'Guatemala';
+      document.getElementById('fecha').value = '';
+      document.getElementById('banco').selectedIndex = 0;
+
+    } catch (error) {
+      alert('Error al guardar o imprimir el cheque: ' + error.message);
+      console.error(error);
+    }
+  });
+</script>
+
+</body>
+</html>

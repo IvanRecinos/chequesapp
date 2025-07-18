@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Migrar datos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h2 class="text-xl font-bold mb-4">Migrar datos desde JSON</h2>
+
+  <!-- Migrar bancos -->
+  <div class="mb-6">
+    <label class="block font-semibold mb-1">Archivo de bancos (bancos.json):</label>
+    <input id="fileBancos" type="file" accept=".json" class="mb-2 block w-full" />
+    <button id="btnBancos" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+      Ejecutar migración de bancos
+    </button>
+  </div>
+
+  <!-- Migrar historial -->
+  <div>
+    <label class="block font-semibold mb-1">Archivo de historial (historial.json):</label>
+    <input id="fileHistorial" type="file" accept=".json" class="mb-2 block w-full" />
+    <button id="btnHistorial" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+      Ejecutar migración de historial
+    </button>
+  </div>
+
+  <script>
+    const btnB = document.getElementById('btnBancos');
+    const btnH = document.getElementById('btnHistorial');
+
+    btnB.addEventListener('click', () => {
+      const file = document.getElementById('fileBancos').files[0];
+      if (!file) return alert('Selecciona primero el archivo de bancos');
+      window.electronAPI.migrarBancos(file.path)
+        .then(() => alert('✅ Bancos migrados correctamente'))
+        .catch(err => alert('❌ Error: ' + err.message));
+    });
+
+    btnH.addEventListener('click', () => {
+      const file = document.getElementById('fileHistorial').files[0];
+      if (!file) return alert('Selecciona primero el archivo de historial');
+      window.electronAPI.migrarHistorial(file.path)
+        .then(() => alert('✅ Historial migrado correctamente'))
+        .catch(err => alert('❌ Error: ' + err.message));
+    });
+  </script>
+</body>
+</html>

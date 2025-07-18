@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Historial de Cheques</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-4">Historial de Cheques</h1>
+
+  <div class="flex items-center gap-4 mb-4">
+    <select id="filtroTipo" class="p-2 border rounded">
+      <option value="">Seleccionar filtro</option>
+      <option value="banco">Buscar por Banco</option>
+      <option value="cliente">Buscar por Cliente</option>
+      <option value="fecha">Buscar por Rango de Fechas</option>
+    </select>
+
+    <div id="campoFiltro" class="flex gap-2 items-center"></div>
+
+    <button id="btnBuscar" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Buscar</button>
+  </div>
+
+  <br />
+
+  <table class="w-full border-collapse bg-white shadow-md">
+    <thead class="bg-gray-200">
+      <tr>
+        <th class="p-2 border"><input type="checkbox" id="selectAll" /></th>
+        <th class="p-2 border">N° Cheque</th>
+        <th class="p-2 border">Cliente</th>
+        <th class="p-2 border">Banco</th>
+        <th class="p-2 border">Monto</th>
+        <th class="p-2 border">Fecha</th>
+        <th class="p-2 border">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaHistorial">
+      <!-- Datos del historial se cargan aquí -->
+    </tbody>
+  </table>
+
+  <script>
+    const filtroTipo = document.getElementById('filtroTipo');
+    const campoFiltro = document.getElementById('campoFiltro');
+    const btnBuscar = document.getElementById('btnBuscar');
+    const tablaHistorial = document.getElementById('tablaHistorial');
+    const selectAll = document.getElementById('selectAll');
+
+    let bancos = [];
+    let clientes = [];
+
+    // Obtener bancos y clientes al cargar
+    window.electronAPI.obtenerBancos().then(data => bancos = data);
+    window.electronAPI.obtenerBeneficiarios().then(data => clientes = data);
+
+    filtroTipo.addEventListener('change', () => {
+      const tipo = filtroTipo.value;
+      campoFiltro.innerHTML = '';
+
+      if (tipo === 'banco') {
+        const select = document.createElement('select');
+        select.id = 'filtroBanco';
+        select.className = 'p-2 border rounded';
+        bancos.forEach(banco => {            
+          const option = document.createElement('option');
+          option.value = banco;
+          option.textContent = banco;
+          select.appendChild(option);
+        });
+        campoFiltro.appendChild(select);
+
+      } else if (tipo === 'cliente') {
+        const select = document.createElement('select');
+        select.id = 'filtroCliente';
+        select.className = 'p-2 border rounded';
+        clientes.forEach(cliente => {
+          const option = document.createElement('option');
+          option.value = cliente;
+          option.textContent = cliente;
+          select.appendChild(option);
+        });
+        campoFiltro.appendChild(select);
+
+      } else if (tipo === 'fecha') {
+        const desde = document.createElement('input');
+        desde.type = 'date';
+        desde.id = 'fechaDesde';
+        desde.className = 'p-2 border rounded';
+        const hasta = document.createElement('input');
+        hasta.type = 'date';
+        hasta.id = 'fechaHasta';
+        hasta.className = 'p-2 border rounded';
+        campoFiltro.appendChild(desde);
+        campoFiltro.appendChild(hasta);
+      }
+    });
+
+    btnBuscar.addEventListener('click', async () => {
+      const tipo = filtroTipo.value;
+      let resultados = [];
+
+      if (tipo === 'banco') {
+        const banco = document.getElementById('filtroBanco').value;
+        resultados = (await window.electronAPI.obtenerHistorial()).filter(c => c.banco === banco);
+
+      } else if (tipo === 'cliente') {
+        const cliente = document.getElementById('filtroCliente').value;
+        resultados = (await window.electronAPI.obtenerHistorial()).filter(c => c.beneficiario === cliente);
+
+      } else if (tipo === 'fecha') {
+        const desde = new Date(document.getElementById('fechaDesde').value);
+        const hasta = new Date(document.getElementById('fechaHasta').value);
+        resultados = (await window.electronAPI.obtenerHistorial()).filter(c => {
+          const f = new Date(c.fecha);
+          return f >= desde && f <= hasta;
+        });
+
+      } else {
+        alert('Selecciona un filtro primero.');
+        return;
+      }
+
+      cargarTabla(resultados);
+    });
+
+    selectAll.addEventListener('change', () => {
+      document.querySelectorAll('.fila-checkbox').forEach(cb => {
+        cb.checked = selectAll.checked;
+      });
+    });
+
+    function cargarTabla(data) {
+      tablaHistorial.innerHTML = '';
+
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+
+        const checkboxTd = document.createElement('td');
+        checkboxTd.className = 'border p-2 text-center';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'fila-checkbox';
+        checkboxTd.appendChild(cb);
+        tr.appendChild(checkboxTd);
+
+        tr.innerHTML += `
+          <td class="border p-2 text-center">${row.noCheque}</td>
+          <td class="border p-2 text-center">${row.beneficiario}</td>
+          <td class="border p-2 text-center">${row.banco}</td>
+          <td class="border p-2 text-center">Q${parseFloat(row.monto).toFixed(2)}</td>
+          <td class="border p-2 text-center">${row.fecha}</td>
+        `;
+
+        const accionesTd = document.createElement('td');
+        accionesTd.className = 'border p-2 text-center';
+
+        //const btnEditar = document.createElement('button');
+        //btnEditar.textContent = 'Editar';
+        //btnEditar.className = 'bg-blue-600 text-white px-2 py-1 rounded mr-2 hover:bg-blue-700';
+        //btnEditar.onclick = () => editarRegistro(row);
+
+        const btnEliminar = document.createElement('button');
+        btnEliminar.textContent = 'Eliminar';
+        btnEliminar.className = 'bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700';
+        btnEliminar.onclick = () => eliminarRegistro(row.id);
+
+        //accionesTd.appendChild(btnEditar);
+        accionesTd.appendChild(btnEliminar);
+        tr.appendChild(accionesTd);
+
+        tablaHistorial.appendChild(tr);
+      });
+    }
+
+    function eliminarRegistro(id) {
+      if (confirm('¿Estás seguro que deseas eliminar este cheque?')) {
+        // Puedes crear un canal IPC para eliminar el cheque desde el main y recargar
+        window.electronAPI.eliminarCheque(id).then(() => {
+          alert('Cheque eliminado.');
+          btnBuscar.click();
+        });
+      }
+    }
+
+    function editarRegistro(row) {
+      // Puedes pasar el ID por query param o localStorage
+      localStorage.setItem('chequeEditar', JSON.stringify(row));
+      window.close();
+      window.open('editar.html');
+    }
+  </script>
+</body>
+</html>

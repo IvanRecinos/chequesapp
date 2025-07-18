@@ -1,0 +1,56 @@
+{
+  "name": "chequesapp",
+  "version": "1.0.6",
+  "description": "Aplicación para llenar e imprimir cheques de forma digital",
+  "main": "src/main.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css",
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --watch",
+    "dev": "concurrently \"npm run watch:css\" \"npm run start\"",
+    "start": "electron .",
+    "dist": "cross-env node build.js"
+  },
+  "keywords": [],
+  "author": "Iván Recinos",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "dotenv": "^17.2.0",
+    "electron-log": "^5.4.1",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.0",
+    "cross-env": "^7.0.3",
+    "electron": "^37.2.1",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
+    "electron-reload": "^2.0.0-alpha.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "3.4"
+  },
+  "build": {
+    "appId": "com.cheques.app",
+    "productName": "ChequesApp",
+    "directories": {
+      "buildResources": "assets"
+    },
+    "files": [
+      "**/*"
+    ],
+    "extraResources": [],
+    "win": {
+      "icon": "src/assets/cheques.ico",
+      "target": "nsis"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ivanrecinos",
+        "repo": "chequesapp"
+      }
+    ]
+  }
+}
