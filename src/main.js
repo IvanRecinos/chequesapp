@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
-const db = require('./db/db');
+const { db } = require('./db/db');
 const { imprimirCheque, imprimirPrueba } = require('./util/imprimir');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
