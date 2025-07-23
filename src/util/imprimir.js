@@ -31,19 +31,16 @@ async function imprimirCheque(datos) {
           </head>
           <body>
             <div class="campo" style="left:${b.beneficiarioX}px; top:${b.beneficiarioY}px;">
-              ${datos.beneficiario}
+              ${datos.beneficiario.toUpperCase()}
             </div>
             <div class="campo" style="left:${b.montoX}px; top:${b.montoY}px;">
               Q${datos.monto.toFixed(2)}
             </div>
             <div class="campo" style="left:${b.montoLetrasX}px; top:${b.montoLetrasY}px;">
-              ${datos.montoLetras}
+              ${datos.montoLetras.toUpperCase()}
             </div>
             <div class="campo" style="left:${b.fechaX}px; top:${b.fechaY}px;">
-              ${datos.lugarYFecha}
-            </div>
-            <div class="campo" style="left:10px; top:10px; font-size: 12px; font-weight: normal;">
-              Cheque No: ${datos.noCheque}
+              ${datos.lugarYFecha.toUpperCase()}
             </div>
           </body>
         </html>
@@ -94,19 +91,16 @@ async function imprimirPrueba(config) {
           </head>
           <body>
             <div class="campo" style="left:${config.beneficiarioX}px; top:${config.beneficiarioY}px;">
-              Beneficiario Prueba
+              BENEFICIARIO PRUEBA
             </div>
             <div class="campo" style="left:${config.montoX}px; top:${config.montoY}px;">
               Q1234.56
             </div>
             <div class="campo" style="left:${config.montoLetrasX}px; top:${config.montoLetrasY}px;">
-              Mil doscientos treinta y cuatro con 56/100
+              MIL DOSCIENTOS TREINTA Y CUATRO CON 56/100
             </div>
             <div class="campo" style="left:${config.fechaX}px; top:${config.fechaY}px;">
-              Ciudad, 01/01/2025
-            </div>
-            <div class="campo" style="left:10px; top:10px; font-size: 12px; font-weight: normal; color: #555;">
-              Prueba de impresión para banco: ${config.nombreBanco}
+              CIUDAD, 01/01/2025
             </div>
           </body>
         </html>
