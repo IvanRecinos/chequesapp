@@ -1,6 +1,5 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
-const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 const {
   obtenerConfiguraciones,
@@ -21,7 +20,6 @@ let mainWindow;
 let configWindow;
 let historialWindow;
 let acercaWindow;
-let migrarWindow;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -49,7 +47,6 @@ function createMainWindow() {
           },
         },
         { label: 'Historial', click: () => openHistorialWindow() },
-        { label: 'Migrar datos', click: () => openMigrarWindow() },
         { type: 'separator' },
         {
           label: 'Buscar actualizaciones',
@@ -79,31 +76,6 @@ function createMainWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-  });
-}
-
-function openMigrarWindow() {
-  if (migrarWindow) {
-    migrarWindow.focus();
-    return;
-  }
-
-  migrarWindow = new BrowserWindow({
-    width: 480,
-    height: 460,
-    resizable: false,
-    minimizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  migrarWindow.loadFile(path.join(__dirname, 'html', 'migrar.html'));
-
-  migrarWindow.on('closed', () => {
-    migrarWindow = null;
   });
 }
 
@@ -343,78 +315,4 @@ ipcMain.handle('eliminar-cheque', (event, id) => {
 
 ipcMain.handle('editar-cheque', (event, id) => {
   return obtenerChequePorId(id);
-});
-
-ipcMain.handle('migrar-bancos', (e, rutaJson) => {
-  const datosCrudos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
-
-  const datos = datosCrudos.map((banco) => ({
-    nombreBanco: banco.nombreBanco ?? 'Desconocido',
-    beneficiarioX: banco.beneficiario?.x ?? 0,
-    beneficiarioY: banco.beneficiario?.y ?? 0,
-    montoX: banco.monto?.x ?? 0,
-    montoY: banco.monto?.y ?? 0,
-    montoLetrasX: banco.montoLetras?.x ?? 0,
-    montoLetrasY: banco.montoLetras?.y ?? 0,
-    fechaX: banco.fecha?.x ?? 0,
-    fechaY: banco.fecha?.y ?? 0,
-  }));
-
-  const insert = require('./db/db').db.prepare(`
-    INSERT OR IGNORE INTO bancos (
-      nombreBanco, beneficiarioX, beneficiarioY,
-      montoX, montoY, montoLetrasX, montoLetrasY,
-      fechaX, fechaY
-    ) VALUES (
-      @nombreBanco, @beneficiarioX, @beneficiarioY,
-      @montoX, @montoY, @montoLetrasX, @montoLetrasY,
-      @fechaX, @fechaY
-    )
-  `);
-
-  const tx = require('./db/db').db.transaction((arr) => arr.forEach((b) => insert.run(b)));
-  tx(datos);
-
-  return true;
-});
-
-ipcMain.handle('migrar-historial', (e, rutaJson) => {
-  const datosCrudos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
-
-  const datos = datosCrudos.map((h) => ({
-    noCheque: h.noCheque ?? '',
-    beneficiario: h.beneficiario ?? '',
-    monto: h.monto ?? '',
-    montoLetras: h.montoLetras ?? '',
-    lugar: h.lugar ?? '',
-    fecha: h.fecha ?? '',
-    banco: h.banco ?? '',
-    fechaGuardado: h.fechaGuardado ?? new Date().toISOString(),
-  }));
-
-  const insert = require('./db/db').db.prepare(`
-    INSERT INTO historial (
-      noCheque, beneficiario, monto, montoLetras,
-      lugar, fecha, banco, fechaGuardado
-    ) VALUES (
-      @noCheque, @beneficiario, @monto, @montoLetras,
-      @lugar, @fecha, @banco, @fechaGuardado
-    )
-  `);
-
-  const tx = require('./db/db').db.transaction((arr) => arr.forEach((h) => insert.run(h)));
-  tx(datos);
-
-  return true;
-});
-
-ipcMain.handle('seleccionar-archivo-json', async () => {
-  const result = await dialog.showOpenDialog({
-    title: 'Selecciona archivo JSON',
-    filters: [{ name: 'JSON', extensions: ['json'] }],
-    properties: ['openFile'],
-  });
-
-  if (result.canceled || result.filePaths.length === 0) return null;
-  return result.filePaths[0];
 });

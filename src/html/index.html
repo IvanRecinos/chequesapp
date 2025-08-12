@@ -25,7 +25,7 @@
     <datalist id="listaBeneficiarios"></datalist>
 
     <label for="monto" class="block font-semibold mb-1">Monto:</label>
-    <input id="monto" type="number" step="0.01" min="0" class="w-full mb-2 p-2 border rounded" />
+    <input id="monto" type="text" step="0.01" min="0" class="w-full mb-2 p-2 border rounded" />
 
     <label for="montoLetras" class="block font-semibold mb-1">Monto en letras:</label>
     <input id="montoLetras" type="text" readonly class="w-full mb-4 p-2 border rounded bg-gray-200" />
@@ -55,6 +55,29 @@
   </div>
 
 <script>
+    const input = document.getElementById('monto');
+
+  input.addEventListener('input', function (e) {
+    let valor = e.target.value;
+
+    // Eliminar todo lo que no sea número o punto
+    valor = valor.replace(/[^0-9.]/g, '');
+
+    // Dividir en parte entera y decimal
+    const partes = valor.split('.');
+    let entero = partes[0];
+    let decimal = partes[1] || '';
+
+    // Limitar a 2 decimales
+    decimal = decimal.substring(0, 2);
+
+    // Formatear parte entera con comas
+    entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    // Unir de nuevo
+    e.target.value = decimal ? `${entero}.${decimal}` : entero;
+  });
+
   // Función para convertir números a letras
   function numeroALetras(num) {
     const unidades = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
@@ -62,32 +85,29 @@
     const especiales = ['once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
     const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
 
-    function convertirGrupo(n) {
-      let output = '';
+   function convertirGrupo(n) {
+  let output = '';
 
-      if (n === 100) return 'cien';
+  if (n === 0) return '';
+  if (n === 100) return 'cien';
 
-      if (n >= 100) {
-        output += centenas[Math.floor(n / 100)] + ' ';
-        n = n % 100;
-      }
+  if (n >= 100) {
+    output += centenas[Math.floor(n / 100)] + ' ';
+    n = n % 100;
+  }
 
-      if (n > 10 && n < 20) {
-        output += especiales[n - 11] + ' ';
-      } else {
-        if (n >= 20) {
-          output += decenas[Math.floor(n / 10)];
-          if (n % 10 > 0) {
-            output += ' y ' + unidades[n % 10];
-          }
-        } else if (n === 10 || n <= 9) {
-          output += unidades[n];
-        }
-        output += ' ';
-      }
+  if (n === 0) return output.trim();
+  if (n === 10) return (output + 'diez').trim();                // FIX: caso 10
+  if (n > 10 && n < 20) return (output + especiales[n - 11]).trim();
 
-      return output.trim();
-    }
+  if (n < 10) return (output + unidades[n]).trim();
+
+  // n >= 20
+  output += decenas[Math.floor(n / 10)];
+  if (n % 10 > 0) output += ' y ' + unidades[n % 10];
+
+  return output.trim();
+}
 
     if (typeof num !== 'number') {
       num = parseFloat(num);
