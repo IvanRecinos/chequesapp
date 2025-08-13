@@ -9,7 +9,6 @@
     input[type="text"] {
       text-transform: uppercase;
     }
-
   </style>
 </head>
 <body class="bg-gray-100 p-6 font-sans">
@@ -55,59 +54,70 @@
   </div>
 
 <script>
-    const input = document.getElementById('monto');
+  // --- Referencias
+  const montoInput = document.getElementById('monto');
+  const montoLetrasInput = document.getElementById('montoLetras');
 
-  input.addEventListener('input', function (e) {
-    let valor = e.target.value;
+  // --- Formateo en vivo: miles con comas y punto decimal ---
+  // Preserva el "." si el usuario lo acaba de escribir (caso "1.")
+  function formatearMilesYDecimales(valor) {
+    let raw = (valor || '');
 
-    // Eliminar todo lo que no sea número o punto
-    valor = valor.replace(/[^0-9.]/g, '');
+    // ¿termina en punto? -> lo preservamos para que el usuario pueda seguir escribiendo decimales
+    const terminaEnPunto = raw.endsWith('.');
 
-    // Dividir en parte entera y decimal
-    const partes = valor.split('.');
-    let entero = partes[0];
-    let decimal = partes[1] || '';
+    // quitar comas y todo lo que no sea dígito o punto
+    raw = raw.replace(/,/g, '').replace(/[^\d.]/g, '');
 
-    // Limitar a 2 decimales
-    decimal = decimal.substring(0, 2);
+    // separar en entero y decimal (solo el primer punto cuenta)
+    const idx = raw.indexOf('.');
+    let entero = idx === -1 ? raw : raw.slice(0, idx);
+    let decimal = idx === -1 ? ''  : raw.slice(idx + 1);
 
-    // Formatear parte entera con comas
-    entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    // quitar ceros a la izquierda del entero (pero permitir "0")
+    entero = entero.replace(/^0+(?=\d)/, '');
 
-    // Unir de nuevo
-    e.target.value = decimal ? `${entero}.${decimal}` : entero;
-  });
+    // máximo 2 decimales
+    decimal = decimal.slice(0, 2);
 
-  // Función para convertir números a letras
+    // agregar separadores de miles al entero
+    const enteroConComas = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    // si el usuario terminó con ".", mantenlo (para poder seguir escribiendo decimales)
+    if (terminaEnPunto && decimal.length === 0) {
+      return `${enteroConComas}.`;
+    }
+
+    return decimal ? `${enteroConComas}.${decimal}` : enteroConComas;
+  }
+
+  // --- Conversor número -> letras ---
   function numeroALetras(num) {
     const unidades = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
     const decenas = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
     const especiales = ['once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
     const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
 
-   function convertirGrupo(n) {
-  let output = '';
+    function convertirGrupo(n) {
+      let output = '';
+      if (n === 0) return '';
+      if (n === 100) return 'cien';
 
-  if (n === 0) return '';
-  if (n === 100) return 'cien';
+      if (n >= 100) {
+        output += centenas[Math.floor(n / 100)] + ' ';
+        n = n % 100;
+      }
 
-  if (n >= 100) {
-    output += centenas[Math.floor(n / 100)] + ' ';
-    n = n % 100;
-  }
+      if (n === 0) return output.trim();
+      if (n === 10) return (output + 'diez').trim(); // caso 10
+      if (n > 10 && n < 20) return (output + especiales[n - 11]).trim();
+      if (n < 10) return (output + unidades[n]).trim();
 
-  if (n === 0) return output.trim();
-  if (n === 10) return (output + 'diez').trim();                // FIX: caso 10
-  if (n > 10 && n < 20) return (output + especiales[n - 11]).trim();
-
-  if (n < 10) return (output + unidades[n]).trim();
-
-  // n >= 20
-  output += decenas[Math.floor(n / 10)];
-  if (n % 10 > 0) output += ' y ' + unidades[n % 10];
-
-  return output.trim();
-}
+      // n >= 20
+      output += decenas[Math.floor(n / 10)];
+      if (n % 10 > 0) output += ' y ' + unidades[n % 10];
+      return output.trim();
+    }
 
     if (typeof num !== 'number') {
       num = parseFloat(num);
@@ -123,9 +133,9 @@
     if (entero === 0) {
       letrasEntero = 'cero';
     } else {
-      const millones = Math.floor(entero / 1000000);
-      const miles = Math.floor((entero - millones * 1000000) / 1000);
-      const cientos = entero % 1000;
+      const millones = Math.floor(entero / 1_000_000);
+      const miles = Math.floor((entero % 1_000_000) / 1_000);
+      const cientos = entero % 1_000;
 
       if (millones > 0) {
         if (millones === 1) letrasEntero += 'un millón ';
@@ -143,12 +153,10 @@
     }
 
     letrasEntero = letrasEntero.trim();
-
     if (letrasEntero === 'ciento') letrasEntero = 'cien';
-
     letrasEntero = letrasEntero.charAt(0).toUpperCase() + letrasEntero.slice(1);
 
-    let letrasCentavos = centavos > 0 ? `${centavos}/100` : '00/100';
+    const letrasCentavos = centavos > 0 ? `${centavos}/100` : '00/100';
 
     if (centavos === 0) {
       return `${letrasEntero} exactos`;
@@ -157,7 +165,7 @@
     }
   }
 
-  // Carga beneficiarios y bancos al iniciar
+  // --- Autocompletar beneficiarios y bancos ---
   window.electronAPI.obtenerBeneficiarios().then(beneficiarios => {
     const datalist = document.getElementById('listaBeneficiarios');
     beneficiarios.forEach(b => {
@@ -177,53 +185,37 @@
     });
   });
 
-  // Actualiza monto en letras automáticamente
-  const montoInput = document.getElementById('monto');
-  const montoLetrasInput = document.getElementById('montoLetras');
+  // --- Input: formateo + letras en vivo ---
   montoInput.addEventListener('input', () => {
-    const val = parseFloat(montoInput.value);
+    // re-formatear lo que se ve (miles y punto decimal)
+    const formateado = formatearMilesYDecimales(montoInput.value);
+    // solo reasignar si cambió, para evitar mover el caret innecesariamente
+    if (montoInput.value !== formateado) {
+      montoInput.value = formateado;
+    }
+
+    // convertir a número REAL (sin comas) para las letras
+    const val = parseFloat(montoInput.value.replace(/,/g, ''));
     montoLetrasInput.value = isNaN(val) ? '' : numeroALetras(val);
   });
 
-  // Función para formatear fecha sin convertir a objeto Date para evitar desfase horario
-  function formatearFecha(fechaISO) {
-    if (!fechaISO) return '';
-    const partes = fechaISO.split('-');
-    if (partes.length !== 3) return '';
-    const year = partes[0];
-    const month = partes[1];
-    const day = partes[2];
-    return `${day}/${month}/${year}`;
-  }
-
-  // Botón imprimir
+  // --- Botón imprimir ---
   const imprimirBtn = document.getElementById('btn-imprimir');
 
   imprimirBtn.addEventListener('click', async () => {
     const noCheque = document.getElementById('noCheque').value.trim();
     const beneficiario = document.getElementById('beneficiario').value.trim();
-    const monto = parseFloat(montoInput.value);
+    const monto = parseFloat(montoInput.value.replace(/,/g, '')); // quitar comas
     const montoLetras = montoLetrasInput.value.trim();
     const lugar = document.getElementById('lugar').value.trim() || 'Guatemala';
 
-   let fecha = document.getElementById('fecha').value; // yyyy-mm-dd
+    let fecha = document.getElementById('fecha').value; // yyyy-mm-dd
+    const partes = (fecha || '').split('-');
+    const anio = parseInt(partes[0]);
+    const mes = parseInt(partes[1]) - 1;
+    const dia = parseInt(partes[2]);
 
-    // Convertir a objeto Date y sumar 1 día
-    let partes = fecha.split('-');
-    let anio = parseInt(partes[0]);
-    let mes = parseInt(partes[1]) - 1; // meses 0-11
-    let dia = parseInt(partes[2]);
-
-    let fechaObj = new Date(anio, mes, dia);
-    fechaObj.setDate(fechaObj.getDate());
-
-    // Formatear para guardar/imprimir
-    fecha = fechaObj.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-
+    const fechaObj = new Date(anio, mes, dia);
     const fechaText = fechaObj.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'long',
@@ -238,18 +230,18 @@
     }
 
     try {
-      // Guardar cheque en base de datos (historial)
+      // Guardar cheque en historial
       await window.electronAPI.guardarCheque({
         noCheque,
         beneficiario,
         monto,
         montoLetras,
         lugar,
-        fecha,
+        fecha: fechaText,
         banco
       });
 
-      // Mandar a imprimir cheque (backend debe tomar configuración del banco para imprimir)
+      // Imprimir cheque
       await window.electronAPI.imprimirCheque({
         noCheque,
         beneficiario,

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Editar bancos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="../styles/output.css" rel="stylesheet" />
+  <style>
+    /* Asegura que el botón se vea incluso si Tailwind no carga */
+    .btn {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-red {
+      background: #dc2626; /* red-600 */
+      color: #fff;
+    }
+    .btn-red:hover { background: #b91c1c; } /* red-700 */
+    .btn-gray {
+      background: #e5e7eb; /* gray-200 */
+      color: #111827;       /* gray-900 */
+    }
+    .btn-gray:hover { background: #d1d5db; } /* gray-300 */
+  </style>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+  <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">Configuraciones de bancos</h1>
+      <button id="btn-refrescar" class="btn btn-gray">Refrescar</button>
+    </div>
+
+    <div id="wrap-tabla" class="overflow-x-auto">
+      <table class="w-full text-sm text-left border">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 py-2 border">Banco</th>
+            <th class="px-3 py-2 border">Beneficiario (X,Y)</th>
+            <th class="px-3 py-2 border">Monto (X,Y)</th>
+            <th class="px-3 py-2 border">Monto Letras (X,Y)</th>
+            <th class="px-3 py-2 border">Fecha (X,Y)</th>
+            <th class="px-3 py-2 border text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-bancos">
+          <!-- filas dinámicas -->
+        </tbody>
+      </table>
+    </div>
+
+    <p id="sin-datos" class="mt-4 text-gray-600" style="display:none;">No hay configuraciones registradas.</p>
+  </div>
+
+  <script>
+    const tbody = document.getElementById('tbody-bancos');
+    const sinDatos = document.getElementById('sin-datos');
+    const btnRefrescar = document.getElementById('btn-refrescar');
+
+    function showNoData(show) {
+      // doble seguridad: clase + estilo directo
+      if (show) {
+        sinDatos.style.display = '';
+        sinDatos.classList.remove('hidden');
+      } else {
+        sinDatos.style.display = 'none';
+        sinDatos.classList.add('hidden');
+      }
+    }
+
+    function limpiarTabla() {
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    }
+
+    function crearCelda(texto, extraClass = '') {
+      const td = document.createElement('td');
+      td.className = `px-3 py-2 border ${extraClass}`.trim();
+      td.textContent = texto;
+      return td;
+    }
+
+    async function cargarBancos() {
+      limpiarTabla();
+      showNoData(false);
+
+      let bancos;
+      try {
+        bancos = await window.electronAPI.obtenerConfiguracionesBancos();
+        console.log('[editarBanco] configuraciones recibidas:', bancos);
+      } catch (e) {
+        console.error('Error obteniendo configuraciones:', e);
+        showNoData(true);
+        return;
+      }
+
+      // Normaliza a arreglo
+      if (!Array.isArray(bancos)) {
+        // si retorna null/undefined/objeto suelto, lo ponemos como arreglo vacío o lo envolvemos
+        bancos = bancos ? [bancos] : [];
+      }
+
+      if (bancos.length === 0) {
+        showNoData(true);
+        return;
+      }
+
+      showNoData(false);
+
+      bancos.forEach((b) => {
+        // defensivo: algunos drivers devuelven columnas con nombres distintos
+        const nombreBanco = b.nombreBanco ?? b.banco ?? '—';
+
+        const tr = document.createElement('tr');
+
+        const tdNombre = crearCelda(nombreBanco, 'font-semibold');
+        const tdBenef  = crearCelda(`(${b.beneficiarioX ?? 0}, ${b.beneficiarioY ?? 0})`);
+        const tdMonto  = crearCelda(`(${b.montoX ?? 0}, ${b.montoY ?? 0})`);
+        const tdMLet   = crearCelda(`(${b.montoLetrasX ?? 0}, ${b.montoLetrasY ?? 0})`);
+        const tdFecha  = crearCelda(`(${b.fechaX ?? 0}, ${b.fechaY ?? 0})`);
+
+        const tdAcc    = document.createElement('td');
+        tdAcc.className = 'px-3 py-2 border text-center';
+
+        const btnEliminar = document.createElement('button');
+        btnEliminar.type = 'button';
+        btnEliminar.className = 'btn btn-red';
+        btnEliminar.textContent = 'Eliminar';
+        btnEliminar.addEventListener('click', async () => {
+          if (!nombreBanco || nombreBanco === '—') return;
+
+          const ok = confirm(`¿Eliminar configuración del banco "${nombreBanco}"? Esta acción no se puede deshacer.`);
+          if (!ok) return;
+
+          try {
+            const eliminado = await window.electronAPI.eliminarConfigBanco(nombreBanco);
+            if (eliminado) {
+              alert('Configuración eliminada correctamente.');
+              cargarBancos();
+            } else {
+              alert('No se pudo eliminar. Revisa la consola para más detalles.');
+            }
+          } catch (err) {
+            console.error('Error al eliminar:', err);
+            alert('Ocurrió un error al eliminar.');
+          }
+        });
+
+        tdAcc.appendChild(btnEliminar);
+
+        tr.appendChild(tdNombre);
+        tr.appendChild(tdBenef);
+        tr.appendChild(tdMonto);
+        tr.appendChild(tdMLet);
+        tr.appendChild(tdFecha);
+        tr.appendChild(tdAcc);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    btnRefrescar.addEventListener('click', cargarBancos);
+    cargarBancos();
+  </script>
+</body>
+</html>

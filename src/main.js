@@ -12,6 +12,7 @@ const {
   obtenerChequePorId,
   obtenerBancos,
 } = require('./db/db');
+
 const { imprimirCheque, imprimirPrueba } = require('./util/imprimir');
 
 const appVersion = app.getVersion();
@@ -20,6 +21,7 @@ let mainWindow;
 let configWindow;
 let historialWindow;
 let acercaWindow;
+let editarBancoWindow;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -47,6 +49,7 @@ function createMainWindow() {
           },
         },
         { label: 'Historial', click: () => openHistorialWindow() },
+        { label: 'Editar bancos', click: () => openEditarBancoWindow() }, // NUEVO
         { type: 'separator' },
         {
           label: 'Buscar actualizaciones',
@@ -61,14 +64,8 @@ function createMainWindow() {
     {
       label: 'Acerca de',
       submenu: [
-        {
-          label: `Versión: ${appVersion}`,
-          enabled: false,
-        },
-        {
-          label: 'Aplicación creada por WebDevelopmentGT',
-          enabled: false,
-        },
+        { label: `Versión: ${appVersion}`, enabled: false },
+        { label: 'Aplicación creada por WebDevelopmentGT', enabled: false },
       ],
     },
   ]);
@@ -115,6 +112,29 @@ function openHistorialWindow() {
 
   historialWindow.on('closed', () => {
     historialWindow = null;
+  });
+}
+
+// NUEVO: ventana de edición de bancos
+function openEditarBancoWindow() {
+  if (editarBancoWindow) {
+    editarBancoWindow.focus();
+    return;
+  }
+  editarBancoWindow = new BrowserWindow({
+    width: 900,
+    height: 650,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  editarBancoWindow.loadFile(path.join(__dirname, 'html', 'editarBanco.html'));
+
+  editarBancoWindow.on('closed', () => {
+    editarBancoWindow = null;
   });
 }
 
@@ -208,8 +228,7 @@ autoUpdater.on('update-downloaded', () => {
     });
 });
 
-// IPC Handlers
-
+// IPC Handlers existentes
 ipcMain.handle('guardar-configuracion', (event, config) => {
   const result = guardarConfiguracionBanco(config);
   if (configWindow) configWindow.close();
@@ -315,4 +334,27 @@ ipcMain.handle('eliminar-cheque', (event, id) => {
 
 ipcMain.handle('editar-cheque', (event, id) => {
   return obtenerChequePorId(id);
+});
+
+// -----------------------------
+// NUEVOS IPC para Editar bancos
+// -----------------------------
+
+// Listar todas las configuraciones de bancos
+ipcMain.handle('obtener-configuraciones-bancos', () => {
+  return obtenerConfiguraciones(); // devuelve arreglo de configs
+});
+
+// Eliminar configuración por nombreBanco (asumimos nombre único)
+ipcMain.handle('eliminar-config-banco', (event, nombreBanco) => {
+  if (!nombreBanco) return false;
+  try {
+    const db = require('./db/db').db; // acceso directo al handle de la DB
+    const stmt = db.prepare('DELETE FROM bancos WHERE nombreBanco = ?');
+    const info = stmt.run(nombreBanco);
+    return info.changes > 0;
+  } catch (err) {
+    console.error('Error al eliminar configuración de banco:', err);
+    return false;
+  }
 });
