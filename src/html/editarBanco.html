@@ -31,7 +31,10 @@
   <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-bold">Configuraciones de bancos</h1>
-      <button id="btn-refrescar" class="btn btn-gray">Refrescar</button>
+      <div class="flex items-center gap-2">
+        <button id="btn-regresar" class="btn btn-gray">Regresar</button>
+        <button id="btn-refrescar" class="btn btn-gray">Refrescar</button>
+      </div>
     </div>
 
     <div id="wrap-tabla" class="overflow-x-auto">
@@ -124,6 +127,16 @@
         const tdAcc    = document.createElement('td');
         tdAcc.className = 'px-3 py-2 border text-center';
 
+        const btnEditar = document.createElement('button');
+        btnEditar.type = 'button';
+        btnEditar.className = 'btn btn-gray';
+        btnEditar.textContent = 'Editar';
+        btnEditar.addEventListener('click', async () => {
+          if (!nombreBanco || nombreBanco === '—') return;
+          // Abrir la pantalla de configuración con la disposición cargada de este banco
+          await window.electronAPI.abrirConfigBanco(nombreBanco);
+        });
+
         const btnEliminar = document.createElement('button');
         btnEliminar.type = 'button';
         btnEliminar.className = 'btn btn-red';
@@ -148,7 +161,9 @@
           }
         });
 
-        tdAcc.appendChild(btnEliminar);
+  tdAcc.appendChild(btnEditar);
+  tdAcc.appendChild(document.createTextNode(' '));
+  tdAcc.appendChild(btnEliminar);
 
         tr.appendChild(tdNombre);
         tr.appendChild(tdBenef);
@@ -161,6 +176,9 @@
       });
     }
 
+    document.getElementById('btn-regresar').addEventListener('click', () => {
+      window.electronAPI.abrirPrincipal();
+    });
     btnRefrescar.addEventListener('click', cargarBancos);
     cargarBancos();
   </script>

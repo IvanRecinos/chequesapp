@@ -1,6 +1,6 @@
 {
   "name": "chequesapp",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Aplicación para llenar e imprimir cheques de forma digital",
   "main": "src/main.js",
   "scripts": {
@@ -9,7 +9,9 @@
     "dev": "concurrently \"npm run watch:css\" \"npm run start\"",
     "start": "electron .",
     "dist": "cross-env dotenv -e .env node build.js",
-    "release": "cross-env dotenv -e .env electron-builder --publish=always"
+    "release": "cross-env dotenv -e .env electron-builder --publish=always",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "keywords": [],
   "author": "Iván Recinos",

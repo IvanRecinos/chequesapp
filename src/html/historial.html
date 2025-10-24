@@ -6,7 +6,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
-  <h1 class="text-2xl font-bold mb-4">Historial de Cheques</h1>
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Historial de Cheques</h1>
+    <button id="btn-regresar" class="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300">Regresar</button>
+  </div>
 
   <div class="flex items-center gap-4 mb-4">
     <select id="filtroTipo" class="p-2 border rounded">
@@ -40,18 +43,72 @@
     </tbody>
   </table>
 
+  <!-- Modal de edición -->
+  <div id="modalEditar" class="fixed inset-0 bg-black/40 hidden items-center justify-center">
+    <div class="bg-white rounded shadow-lg w-full max-w-xl p-4">
+      <h2 class="text-xl font-semibold mb-3">Editar cheque</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium">N° Cheque</label>
+          <input id="editNoCheque" type="text" class="w-full p-2 border rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Beneficiario</label>
+          <input id="editBeneficiario" type="text" class="w-full p-2 border rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Banco</label>
+          <select id="editBanco" class="w-full p-2 border rounded"></select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Monto</label>
+          <input id="editMonto" type="text" inputmode="decimal" class="w-full p-2 border rounded" placeholder="1,234.56"/>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-medium">Monto en letras</label>
+          <input id="editMontoLetras" type="text" class="w-full p-2 border rounded bg-gray-50" readonly/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Lugar</label>
+          <input id="editLugar" type="text" class="w-full p-2 border rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Fecha (texto)</label>
+          <input id="editFecha" type="text" class="w-full p-2 border rounded" placeholder="ej. 23 de octubre de 2025"/>
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="btnCancelarEdit" class="px-3 py-2 rounded border">Cancelar</button>
+        <button id="btnGuardarEdit" class="px-3 py-2 rounded bg-blue-600 text-white">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    document.getElementById('btn-regresar').addEventListener('click', () => {
+      window.electronAPI.abrirPrincipal();
+    });
     const filtroTipo = document.getElementById('filtroTipo');
     const campoFiltro = document.getElementById('campoFiltro');
     const btnBuscar = document.getElementById('btnBuscar');
     const tablaHistorial = document.getElementById('tablaHistorial');
     const selectAll = document.getElementById('selectAll');
 
-    let bancos = [];
+  let bancos = [];
     let clientes = [];
+  let edicionActualId = null;
 
     // Obtener bancos y clientes al cargar
-    window.electronAPI.obtenerBancos().then(data => bancos = data);
+    window.electronAPI.obtenerBancos().then(data => {
+      bancos = data;
+      // poblar select del modal de edición
+      const sel = document.getElementById('editBanco');
+      sel.innerHTML = '';
+      bancos.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b; opt.textContent = b; sel.appendChild(opt);
+      });
+    });
     window.electronAPI.obtenerBeneficiarios().then(data => clientes = data);
 
     filtroTipo.addEventListener('change', () => {
@@ -102,19 +159,16 @@
 
       if (tipo === 'banco') {
         const banco = document.getElementById('filtroBanco').value;
-        resultados = (await window.electronAPI.obtenerHistorial()).filter(c => c.banco === banco);
+        resultados = await window.electronAPI.buscarPorBanco(banco);
 
       } else if (tipo === 'cliente') {
         const cliente = document.getElementById('filtroCliente').value;
-        resultados = (await window.electronAPI.obtenerHistorial()).filter(c => c.beneficiario === cliente);
+        resultados = await window.electronAPI.buscarPorCliente(cliente);
 
       } else if (tipo === 'fecha') {
-        const desde = new Date(document.getElementById('fechaDesde').value);
-        const hasta = new Date(document.getElementById('fechaHasta').value);
-        resultados = (await window.electronAPI.obtenerHistorial()).filter(c => {
-          const f = new Date(c.fecha);
-          return f >= desde && f <= hasta;
-        });
+        const desde = document.getElementById('fechaDesde').value;
+        const hasta = document.getElementById('fechaHasta').value;
+        resultados = await window.electronAPI.buscarPorRango({ desde, hasta });
 
       } else {
         alert('Selecciona un filtro primero.');
@@ -148,30 +202,119 @@
           <td class="border p-2 text-center">${row.noCheque}</td>
           <td class="border p-2 text-center">${row.beneficiario}</td>
           <td class="border p-2 text-center">${row.banco}</td>
-          <td class="border p-2 text-center">Q${parseFloat(row.monto).toFixed(2)}</td>
+          <td class="border p-2 text-center">Q${formatMonto(row.monto)}</td>
           <td class="border p-2 text-center">${row.fecha}</td>
         `;
 
         const accionesTd = document.createElement('td');
         accionesTd.className = 'border p-2 text-center';
-
-        //const btnEditar = document.createElement('button');
-        //btnEditar.textContent = 'Editar';
-        //btnEditar.className = 'bg-blue-600 text-white px-2 py-1 rounded mr-2 hover:bg-blue-700';
-        //btnEditar.onclick = () => editarRegistro(row);
+        const btnEditar = document.createElement('button');
+        btnEditar.textContent = 'Editar';
+        btnEditar.className = 'bg-blue-600 text-white px-2 py-1 rounded mr-2 hover:bg-blue-700';
+        btnEditar.onclick = () => abrirModalEditar(row.id);
 
         const btnEliminar = document.createElement('button');
         btnEliminar.textContent = 'Eliminar';
         btnEliminar.className = 'bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700';
         btnEliminar.onclick = () => eliminarRegistro(row.id);
 
-        //accionesTd.appendChild(btnEditar);
+        accionesTd.appendChild(btnEditar);
         accionesTd.appendChild(btnEliminar);
         tr.appendChild(accionesTd);
 
         tablaHistorial.appendChild(tr);
       });
     }
+
+    // Formateo/parse de montos (miles)
+    function parseMonto(texto) {
+      if (typeof texto !== 'string') texto = String(texto ?? '');
+      const limpio = texto.replace(/[^0-9,.-]/g, '').trim();
+      if (!limpio) return NaN;
+      if (/,/.test(limpio) && /\./.test(limpio)) {
+        return parseFloat(limpio.replace(/,/g, ''));
+      }
+      if (/,/.test(limpio) && !/\./.test(limpio)) {
+        return parseFloat(limpio.replace(/\./g, '').replace(/,/g, '.'));
+      }
+      return parseFloat(limpio.replace(/,/g, ''));
+    }
+    function formatMonto(n) {
+      const num = typeof n === 'number' ? n : parseMonto(n);
+      if (isNaN(num)) return '0.00';
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+    }
+
+    // Modal edición
+    const modal = document.getElementById('modalEditar');
+    const editNoCheque = document.getElementById('editNoCheque');
+    const editBeneficiario = document.getElementById('editBeneficiario');
+    const editBanco = document.getElementById('editBanco');
+    const editMonto = document.getElementById('editMonto');
+    const editMontoLetras = document.getElementById('editMontoLetras');
+    const editLugar = document.getElementById('editLugar');
+    const editFecha = document.getElementById('editFecha');
+    const btnCancelarEdit = document.getElementById('btnCancelarEdit');
+    const btnGuardarEdit = document.getElementById('btnGuardarEdit');
+
+    function numeroALetrasLocal(num) {
+      try {
+        const partes = Number(num).toFixed(2).split('.');
+        const cent = partes[1] || '00';
+        return `${Math.floor(Number(num))} con ${cent}/100`;
+      } catch { return ''; }
+    }
+
+    editMonto.addEventListener('input', (e) => {
+      const val = parseMonto(e.target.value);
+      e.target.value = isNaN(val) ? '' : new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+      editMontoLetras.value = isNaN(val) ? '' : numeroALetrasLocal(val);
+    });
+
+    function abrirModalEditar(id) {
+      edicionActualId = id;
+      window.electronAPI.editarCheque(id).then(row => {
+        if (!row) return;
+        editNoCheque.value = row.noCheque || '';
+        editBeneficiario.value = row.beneficiario || '';
+        editBanco.value = row.banco || '';
+        editMonto.value = formatMonto(row.monto);
+        editMontoLetras.value = numeroALetrasLocal(parseMonto(row.monto));
+        editLugar.value = row.lugar || '';
+        editFecha.value = row.fecha || '';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+    }
+
+    btnCancelarEdit.addEventListener('click', () => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      edicionActualId = null;
+    });
+
+    btnGuardarEdit.addEventListener('click', async () => {
+      if (!edicionActualId) return;
+      const montoNum = parseMonto(editMonto.value);
+      const datos = {
+        noCheque: editNoCheque.value.trim(),
+        beneficiario: editBeneficiario.value.trim(),
+        banco: editBanco.value,
+        monto: montoNum,
+        montoLetras: numeroALetrasLocal(montoNum),
+        lugar: editLugar.value.trim(),
+        fecha: editFecha.value.trim(),
+      };
+      try {
+        await window.electronAPI.actualizarCheque(edicionActualId, datos);
+        alert('Cambios guardados');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        btnBuscar.click();
+      } catch (e) {
+        alert('Error al guardar cambios: ' + e.message);
+      }
+    });
 
     function eliminarRegistro(id) {
       if (confirm('¿Estás seguro que deseas eliminar este cheque?')) {
@@ -183,12 +326,7 @@
       }
     }
 
-    function editarRegistro(row) {
-      // Puedes pasar el ID por query param o localStorage
-      localStorage.setItem('chequeEditar', JSON.stringify(row));
-      window.close();
-      window.open('editar.html');
-    }
+    function editarRegistro(row) {}
   </script>
 </body>
 </html>

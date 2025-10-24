@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   buscarPorRango: (rango) => ipcRenderer.invoke('buscar-por-rango', rango),
   eliminarCheque: (id) => ipcRenderer.invoke('eliminar-cheque', id),
   editarCheque: (id) => ipcRenderer.invoke('editar-cheque', id),
+  actualizarCheque: (id, datos) => ipcRenderer.invoke('actualizar-cheque', { id, datos }),
+  abrirConfigBanco: (nombreBanco) => ipcRenderer.invoke('abrir-config-banco', nombreBanco),
+  abrirPrincipal: () => ipcRenderer.invoke('abrir-principal'),
 
   // Nuevos para Editar bancos
   obtenerConfiguracionesBancos: () => ipcRenderer.invoke('obtener-configuraciones-bancos'),

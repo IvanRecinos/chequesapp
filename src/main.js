@@ -11,6 +11,7 @@ const {
   eliminarChequePorId,
   obtenerChequePorId,
   obtenerBancos,
+  actualizarChequePorId,
 } = require('./db/db');
 
 const { imprimirCheque, imprimirPrueba } = require('./util/imprimir');
@@ -22,6 +23,14 @@ let configWindow;
 let historialWindow;
 let acercaWindow;
 let editarBancoWindow;
+
+function closeIfExists(winRefName) {
+  try {
+    if (winRefName && !winRefName.isDestroyed()) {
+      winRefName.close();
+    }
+  } catch {}
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -76,7 +85,7 @@ function createMainWindow() {
   });
 }
 
-function openConfigWindow() {
+function openConfigWindow(nombreBanco) {
   configWindow = new BrowserWindow({
     width: 800,
     height: 650,
@@ -86,12 +95,26 @@ function openConfigWindow() {
       nodeIntegration: false,
     },
   });
-  configWindow.loadFile(path.join(__dirname, 'html', 'configCheque.html'));
+  // Pasar el banco por query si viene en parámetro
+  const filePath = path.join(__dirname, 'html', 'configCheque.html');
+  if (nombreBanco) {
+    configWindow.loadFile(filePath, { query: { banco: nombreBanco } });
+  } else {
+    configWindow.loadFile(filePath);
+  }
 
   configWindow.on('closed', () => {
     configWindow = null;
-    if (!mainWindow) createMainWindow();
+    // Solo recrear principal si no hay ninguna otra ventana abierta
+    if (!mainWindow && BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
   });
+
+  // Cerrar otras ventanas luego de abrir esta (para mantener una sola activa)
+  if (mainWindow) { const w = mainWindow; mainWindow = null; closeIfExists(w); }
+  if (historialWindow) { const w = historialWindow; historialWindow = null; closeIfExists(w); }
+  if (editarBancoWindow) { const w = editarBancoWindow; editarBancoWindow = null; closeIfExists(w); }
 }
 
 function openHistorialWindow() {
@@ -112,7 +135,15 @@ function openHistorialWindow() {
 
   historialWindow.on('closed', () => {
     historialWindow = null;
+    if (!mainWindow && BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
   });
+
+  // Mantener una sola ventana activa
+  if (mainWindow) { const w = mainWindow; mainWindow = null; closeIfExists(w); }
+  if (configWindow) { const w = configWindow; configWindow = null; closeIfExists(w); }
+  if (editarBancoWindow) { const w = editarBancoWindow; editarBancoWindow = null; closeIfExists(w); }
 }
 
 // NUEVO: ventana de edición de bancos
@@ -135,7 +166,15 @@ function openEditarBancoWindow() {
 
   editarBancoWindow.on('closed', () => {
     editarBancoWindow = null;
+    if (!mainWindow && BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
   });
+
+  // Mantener una sola ventana activa
+  if (mainWindow) { const w = mainWindow; mainWindow = null; closeIfExists(w); }
+  if (configWindow) { const w = configWindow; configWindow = null; closeIfExists(w); }
+  if (historialWindow) { const w = historialWindow; historialWindow = null; closeIfExists(w); }
 }
 
 function openAcercaWindow() {
@@ -334,6 +373,35 @@ ipcMain.handle('eliminar-cheque', (event, id) => {
 
 ipcMain.handle('editar-cheque', (event, id) => {
   return obtenerChequePorId(id);
+});
+
+ipcMain.handle('actualizar-cheque', (event, { id, datos }) => {
+  try {
+    return actualizarChequePorId(id, datos);
+  } catch (error) {
+    console.error('Error al actualizar cheque:', error);
+    throw error;
+  }
+});
+
+// Abrir configuración de banco específico (para editar disposición)
+ipcMain.handle('abrir-config-banco', (event, nombreBanco) => {
+  openConfigWindow(nombreBanco);
+  return true;
+});
+
+// Volver a la ventana principal (abre main y cierra la actual)
+ipcMain.handle('abrir-principal', (event) => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createMainWindow();
+  } else {
+    mainWindow.focus();
+  }
+  const currentWin = BrowserWindow.fromWebContents(event.sender);
+  if (currentWin && !currentWin.isDestroyed()) {
+    currentWin.close();
+  }
+  return true;
 });
 
 // -----------------------------

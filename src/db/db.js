@@ -147,6 +147,30 @@ function obtenerBancos() {
   return stmt.all();
 }
 
+function actualizarChequePorId(id, datos) {
+  const {
+    noCheque,
+    beneficiario,
+    monto,
+    montoLetras,
+    lugar,
+    fecha,
+    banco,
+  } = datos;
+  const stmt = db.prepare(`
+    UPDATE historial
+    SET noCheque = @noCheque,
+        beneficiario = @beneficiario,
+        monto = @monto,
+        montoLetras = @montoLetras,
+        lugar = @lugar,
+        fecha = @fecha,
+        banco = @banco
+    WHERE id = @id
+  `);
+  return stmt.run({ id, noCheque, beneficiario, monto, montoLetras, lugar, fecha, banco });
+}
+
 module.exports = {
   db,
   obtenerConfiguraciones,
@@ -158,4 +182,5 @@ module.exports = {
   eliminarChequePorId,
   obtenerChequePorId,
   obtenerBancos,
+  actualizarChequePorId,
 };

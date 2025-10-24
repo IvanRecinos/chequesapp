@@ -27,7 +27,11 @@
 
 </head>
 <body class="p-6 bg-gray-100 text-gray-800">
-  <h1 class="text-2xl font-bold mb-4">Configurar Cheque</h1>
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Configurar Cheque</h1>
+    <button id="btn-regresar" class="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300">Regresar</button>
+  </div>
+  <p id="modoEdicion" class="mb-2 text-sm text-blue-700 hidden">Modo edición de banco: <span id="bancoActual"></span></p>
 
   <!-- Área de cheque -->
   <div id="canvas" class="mx-auto">
@@ -71,6 +75,40 @@
 
     document.addEventListener('mouseup', () => {
       selected = null;
+    });
+
+    // Leer parámetro de banco para modo edición
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    const bancoParam = getQueryParam('banco');
+    if (bancoParam) {
+      // Mostrar aviso de modo edición
+      document.getElementById('modoEdicion').classList.remove('hidden');
+      document.getElementById('bancoActual').textContent = bancoParam;
+      // Cargar posiciones existentes y bloquear el nombre
+      window.electronAPI.obtenerConfiguracionesBancos().then(configs => {
+        const cfg = (configs || []).find(c => c.nombreBanco === bancoParam);
+        if (!cfg) return;
+        document.getElementById('nombreBanco').value = cfg.nombreBanco;
+        document.getElementById('nombreBanco').disabled = true;
+        // aplicar posiciones
+        document.getElementById('beneficiario').style.left = (cfg.beneficiarioX || 0) + 'px';
+        document.getElementById('beneficiario').style.top  = (cfg.beneficiarioY || 0) + 'px';
+        document.getElementById('monto').style.left        = (cfg.montoX || 0) + 'px';
+        document.getElementById('monto').style.top         = (cfg.montoY || 0) + 'px';
+        document.getElementById('montoLetras').style.left  = (cfg.montoLetrasX || 0) + 'px';
+        document.getElementById('montoLetras').style.top   = (cfg.montoLetrasY || 0) + 'px';
+        document.getElementById('fecha').style.left        = (cfg.fechaX || 0) + 'px';
+        document.getElementById('fecha').style.top         = (cfg.fechaY || 0) + 'px';
+      });
+    }
+
+    // Botón regresar a principal
+    document.getElementById('btn-regresar').addEventListener('click', () => {
+      window.electronAPI.abrirPrincipal();
     });
 
     // Botón imprimir prueba
