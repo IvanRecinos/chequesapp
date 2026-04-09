@@ -10,7 +10,7 @@ async function imprimirCheque(datos) {
   const formatCurrency = (n) => {
     const num = typeof n === 'number' ? n : parseFloat(String(n).replace(/[^0-9.-]/g, ''));
     if (isNaN(num)) return 'Q0.00';
-    return 'Q' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   };
 
   // Aquí iría la lógica real para imprimir, usando por ejemplo:

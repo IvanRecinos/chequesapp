@@ -12,6 +12,7 @@ yarn-error.log*
 
 # Archivos de entorno (si contienen datos sensibles)
 .env
+tockengithub.txt
 
 # Sistema operativo
 .DS_Store

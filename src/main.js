@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 const {
   obtenerConfiguraciones,
   guardarConfiguracionBanco,
@@ -16,7 +17,13 @@ const {
 
 const { imprimirCheque, imprimirPrueba } = require('./util/imprimir');
 
+// Configuración de logging para diagnosticar problemas del autoUpdater
+// Guarda logs en: %APPDATA%/ChequesApp/logs/main.log (Windows)
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
+
 const appVersion = app.getVersion();
+log.info(`ChequesApp iniciado. Versión ${appVersion}`);
 
 let mainWindow;
 let configWindow;
@@ -63,7 +70,19 @@ function createMainWindow() {
         {
           label: 'Buscar actualizaciones',
           click: () => {
-            autoUpdater.checkForUpdates();
+            log.info('Menú: Buscar actualizaciones manualmente');
+            autoUpdater
+              .checkForUpdates()
+              .then((result) => {
+                log.info('Resultado de checkForUpdates', result && {
+                  version: result.updateInfo && result.updateInfo.version,
+                  releaseName: result.updateInfo && result.updateInfo.releaseName,
+                  releaseDate: result.updateInfo && result.updateInfo.releaseDate,
+                });
+              })
+              .catch((err) => {
+                log.error('Error en checkForUpdates:', err);
+              });
           },
         },
         { type: 'separator' },
@@ -214,6 +233,7 @@ app.on('window-all-closed', () => {
 
 // AutoUpdater events
 autoUpdater.on('checking-for-update', () => {
+  log.info('AutoUpdater: checking-for-update');
   dialog.showMessageBox({
     type: 'info',
     title: 'Chequeando actualizaciones',
@@ -221,7 +241,8 @@ autoUpdater.on('checking-for-update', () => {
   });
 });
 
-autoUpdater.on('update-available', () => {
+autoUpdater.on('update-available', (info) => {
+  log.info('AutoUpdater: update-available', info);
   dialog.showMessageBox({
     type: 'info',
     title: 'Actualización disponible',
@@ -229,7 +250,8 @@ autoUpdater.on('update-available', () => {
   });
 });
 
-autoUpdater.on('update-not-available', () => {
+autoUpdater.on('update-not-available', (info) => {
+  log.info('AutoUpdater: update-not-available', info);
   dialog.showMessageBox({
     type: 'info',
     title: 'Sin actualizaciones',
@@ -238,6 +260,7 @@ autoUpdater.on('update-not-available', () => {
 });
 
 autoUpdater.on('error', (err) => {
+  log.error('AutoUpdater: error', err);
   dialog.showErrorBox(
     'Error al buscar actualizaciones',
     err == null ? 'Error desconocido' : (err.stack || err).toString()
@@ -248,13 +271,14 @@ autoUpdater.on('download-progress', (progressObj) => {
   let log_message = `Velocidad: ${Math.round(
     progressObj.bytesPerSecond / 1024
   )} KB/s - Descargado ${Math.round(progressObj.percent)}% (${progressObj.transferred}/${progressObj.total})`;
-  console.log(log_message);
+  log.info(log_message);
   if (mainWindow) {
     mainWindow.webContents.send('download-progress', progressObj.percent);
   }
 });
 
 autoUpdater.on('update-downloaded', () => {
+  log.info('AutoUpdater: update-downloaded, reiniciando para instalar');
   dialog
     .showMessageBox({
       type: 'info',
